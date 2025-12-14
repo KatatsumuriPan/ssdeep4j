@@ -23,7 +23,7 @@ import java.util.Arrays;
  * A rolling hash allows for the efficient calculation of hash values for a
  * sliding window of data. This implementation is a direct port of the logic
  * from the original C version of ssdeep and is a core component of the
- * {@link FuzzyComparator#hasCommonSubstring(String, String)} optimization.
+ * {@link FuzzyComparator#hasCommonSubstringRolling(String, String)} optimization.
  * <p>
  * This class is a package-private helper and is not intended for public use.
  */
