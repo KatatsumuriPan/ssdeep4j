@@ -79,8 +79,8 @@ public final class FuzzyComparator {
 
 		long blockSize1, blockSize2;
 		try {
-			blockSize1 = Long.parseLong(hash1.substring(0, p1c1));
-			blockSize2 = Long.parseLong(hash2.substring(0, p2c1));
+			blockSize1 = JavaCompat.parseLong(hash1, 0, p1c1);
+			blockSize2 = JavaCompat.parseLong(hash2, 0, p2c1);
 		} catch (NumberFormatException e) {
 			return -1;
 		}
