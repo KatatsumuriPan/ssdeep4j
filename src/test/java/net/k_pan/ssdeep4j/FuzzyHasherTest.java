@@ -144,7 +144,7 @@ class FuzzyHasherTest {
 
 	@Test
 	void testRandomBinaryInput2() throws IOException {
-		byte[] randomBytes = new byte[1024*1024];
+		byte[] randomBytes = new byte[1024 * 1024];
 		new Random(99999).nextBytes(randomBytes); // Use a fixed seed for reproducibility
 		String expectedHash = "24576:xiX3sxju0GrsNm+SwNtrIFaBD6SU/2OBGLqLL:O3Qju/QkTwNNII6fnE0L";
 		String actualHash = FuzzyHasher.hash(randomBytes);

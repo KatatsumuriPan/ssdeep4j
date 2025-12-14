@@ -329,7 +329,7 @@ public final class FuzzyHasher {
 		 *
 		 * @param totalFixedLength The total expected size of the input data in bytes.
 		 * @return 0 on success, -1 on failure (e.g., if the size is too large or
-		 *         conflicts with a previously set size).
+		 * conflicts with a previously set size).
 		 */
 		public int setTotalInputLength(long totalFixedLength) {
 			int bi = 0;
