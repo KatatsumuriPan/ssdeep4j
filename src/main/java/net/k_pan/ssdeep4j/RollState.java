@@ -70,7 +70,7 @@ final class RollState {
 		h1 -= (window[n] & 0xFF);
 
 		window[n] = c;
-		n = (int) (Integer.toUnsignedLong(n + 1) % ROLLING_WINDOW);
+		n = (n + 1) % ROLLING_WINDOW;
 
 		h3 <<= 5;
 		h3 ^= (c & 0xFF);

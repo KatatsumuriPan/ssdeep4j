@@ -138,6 +138,32 @@ public final class FuzzyHasher {
 	}
 
 	/**
+	 * A version of {@link #copyEliminateSequences(String)} that operates on a {@code char[]}
+	 * and appends the result directly to a {@link StringBuilder} to avoid intermediate
+	 * String allocations.
+	 *
+	 * @param sb     The StringBuilder to append the result to.
+	 * @param input  The source character array.
+	 * @param offset The starting offset in the input array.
+	 * @param length The number of characters to process.
+	 */
+	static void appendEliminateSequences(StringBuilder sb, char[] input, int offset, int length) {
+		if (length < 4) {
+			if (length > 0) {
+				sb.append(input, offset, length);
+			}
+			return;
+		}
+		sb.append(input, offset, 3);
+		for (int i = 3; i < length; i++) {
+			char c = input[offset + i];
+			if (c != sb.charAt(sb.length() - 1) || c != sb.charAt(sb.length() - 2) || c != sb.charAt(sb.length() - 3)) {
+				sb.append(c);
+			}
+		}
+	}
+
+	/**
 	 * Manages the overall state of the fuzzy hash computation.
 	 * This class acts as the main engine for the hashing process.
 	 * <p>
@@ -237,9 +263,9 @@ public final class FuzzyHasher {
 			result.append(SSDEEP_BS(bi));
 			result.append(':');
 			if ((flags & FUZZY_FLAG_ELIMSEQ) != 0)
-				result.append(copyEliminateSequences(bh[bi].getFirstDigest()));
+				appendEliminateSequences(result, bh[bi].digest, 0, bh[bi].dindex);
 			else
-				result.append(bh[bi].getFirstDigest());
+				result.append(bh[bi].digest, 0, bh[bi].dindex);
 			if (h != 0) {
 				char r = B64.charAt(bh[bi].h & 0xFF);
 				if (canAppend(r, result)) {
@@ -261,9 +287,9 @@ public final class FuzzyHasher {
 				}
 
 				if ((flags & FUZZY_FLAG_ELIMSEQ) != 0)
-					result.append(copyEliminateSequences(bh[bi].getFirstDigest()));
+					appendEliminateSequences(result, bh[bi].digest, 0, bh[bi].dindex);
 				else
-					result.append(bh[bi].getFirstDigest());
+					result.append(bh[bi].digest, 0, bh[bi].dindex);
 
 				if (h != 0) {
 					int hashVal = (flags & FUZZY_FLAG_NOTRUNC) != 0
@@ -459,10 +485,6 @@ public final class FuzzyHasher {
 
 			public int getFirstDigestLength() {
 				return dindex;
-			}
-
-			public String getFirstDigest() {
-				return new String(digest, 0, dindex);
 			}
 
 			public char getLastDigest() {

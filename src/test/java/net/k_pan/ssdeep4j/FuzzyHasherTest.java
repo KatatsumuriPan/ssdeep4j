@@ -176,5 +176,10 @@ class FuzzyHasherTest {
 	})
 	void testCopyEliminateSequences(String input, String expected) {
 		assertEquals(expected, FuzzyHasher.copyEliminateSequences(input));
+		StringBuilder sb = new StringBuilder();
+		if (input != null) {
+			FuzzyHasher.appendEliminateSequences(sb, input.toCharArray(), 0, input.length());
+			assertEquals(expected, sb.toString());
+		}
 	}
 }

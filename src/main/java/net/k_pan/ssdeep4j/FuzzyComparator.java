@@ -68,17 +68,19 @@ public final class FuzzyComparator {
 			return -1;
 		}
 
-		String[] parts1 = hash1.split(":", 3);
-		String[] parts2 = hash2.split(":", 3);
+		int p1c1 = hash1.indexOf(':');
+		int p1c2 = (p1c1 == -1) ? -1 : hash1.indexOf(':', p1c1 + 1);
+		int p2c1 = hash2.indexOf(':');
+		int p2c2 = (p2c1 == -1) ? -1 : hash2.indexOf(':', p2c1 + 1);
 
-		if (parts1.length <= 2 || parts2.length <= 2) {
+		if (p1c2 == -1 || p2c2 == -1) {
 			return -1;
 		}
 
 		long blockSize1, blockSize2;
 		try {
-			blockSize1 = Long.parseLong(parts1[0]);
-			blockSize2 = Long.parseLong(parts2[0]);
+			blockSize1 = Long.parseLong(hash1.substring(0, p1c1));
+			blockSize2 = Long.parseLong(hash2.substring(0, p2c1));
 		} catch (NumberFormatException e) {
 			return -1;
 		}
@@ -88,10 +90,10 @@ public final class FuzzyComparator {
 			return 0;
 		}
 
-		String s1b1 = FuzzyHasher.copyEliminateSequences(parts1[1]);
-		String s2b1 = FuzzyHasher.copyEliminateSequences(parts2[1]);
-		String s1b2 = FuzzyHasher.copyEliminateSequences(parts1[2]);
-		String s2b2 = FuzzyHasher.copyEliminateSequences(parts2[2]);
+		String s1b1 = FuzzyHasher.copyEliminateSequences(hash1.substring(p1c1 + 1, p1c2));
+		String s1b2 = FuzzyHasher.copyEliminateSequences(hash1.substring(p1c2 + 1));
+		String s2b1 = FuzzyHasher.copyEliminateSequences(hash2.substring(p2c1 + 1, p2c2));
+		String s2b2 = FuzzyHasher.copyEliminateSequences(hash2.substring(p2c2 + 1));
 
 		// Check for an exact match.
 		if (blockSize1 == blockSize2 && s1b1.equals(s2b1) && s1b2.equals(s2b2)) {
@@ -160,7 +162,7 @@ public final class FuzzyComparator {
 		// Adjust the score based on the block size.
 		if (blockSize >= (99 + RollState.ROLLING_WINDOW) / RollState.ROLLING_WINDOW * MIN_BLOCKSIZE)
 			return score;
-		long term_score = blockSize / MIN_BLOCKSIZE * Math.min(s1.length(), s2.length());
+		long term_score = blockSize / MIN_BLOCKSIZE * s1.length();
 		return (int) Math.min(score, term_score);
 	}
 
