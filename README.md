@@ -4,6 +4,12 @@
 
 A ssdeep fuzzy hashing algorithm implementation for Java.
 
+## Acknowledgments
+
+This project is heavily inspired by the original ssdeep library. We would like to express our gratitude to the ssdeep project team.
+
+- **ssdeep:** [https://github.com/ssdeep-project/ssdeep/](https://github.com/ssdeep-project/ssdeep/)
+
 ## Installation
 
 ### Maven
