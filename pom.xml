@@ -76,6 +76,7 @@
                     <archive>
                         <manifestEntries>
                             <Multi-Release>true</Multi-Release>
+                            <Automatic-Module-Name>net.k_pan.ssdeep4j</Automatic-Module-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>
