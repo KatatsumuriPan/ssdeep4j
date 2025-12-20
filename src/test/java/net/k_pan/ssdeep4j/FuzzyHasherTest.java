@@ -144,7 +144,7 @@ class FuzzyHasherTest {
 
 	@Test
 	void testRandomBinaryInput2() throws IOException {
-		byte[] randomBytes = new byte[1024*1024];
+		byte[] randomBytes = new byte[1024 * 1024];
 		new Random(99999).nextBytes(randomBytes); // Use a fixed seed for reproducibility
 		String expectedHash = "24576:xiX3sxju0GrsNm+SwNtrIFaBD6SU/2OBGLqLL:O3Qju/QkTwNNII6fnE0L";
 		String actualHash = FuzzyHasher.hash(randomBytes);
@@ -176,5 +176,10 @@ class FuzzyHasherTest {
 	})
 	void testCopyEliminateSequences(String input, String expected) {
 		assertEquals(expected, FuzzyHasher.copyEliminateSequences(input));
+		StringBuilder sb = new StringBuilder();
+		if (input != null) {
+			FuzzyHasher.appendEliminateSequences(sb, input.toCharArray(), 0, input.length());
+			assertEquals(expected, sb.toString());
+		}
 	}
 }

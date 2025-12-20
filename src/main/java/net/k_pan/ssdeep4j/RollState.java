@@ -23,7 +23,7 @@ import java.util.Arrays;
  * A rolling hash allows for the efficient calculation of hash values for a
  * sliding window of data. This implementation is a direct port of the logic
  * from the original C version of ssdeep and is a core component of the
- * {@link FuzzyComparator#hasCommonSubstring(String, String)} optimization.
+ * {@link FuzzyComparator#hasCommonSubstringRolling(String, String)} optimization.
  * <p>
  * This class is a package-private helper and is not intended for public use.
  */
@@ -70,7 +70,7 @@ final class RollState {
 		h1 -= (window[n] & 0xFF);
 
 		window[n] = c;
-		n = (int) (Integer.toUnsignedLong(n + 1) % ROLLING_WINDOW);
+		n = (n + 1) % ROLLING_WINDOW;
 
 		h3 <<= 5;
 		h3 ^= (c & 0xFF);
