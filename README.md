@@ -18,14 +18,14 @@ This project is heavily inspired by the original ssdeep library. We would like t
 <dependency>
     <groupId>net.k-pan</groupId>
     <artifactId>ssdeep4j</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'net.k-pan:ssdeep4j:1.0.0'
+implementation 'net.k-pan:ssdeep4j:1.1.0'
 ```
 
 ## Usage
