@@ -15,11 +15,10 @@
  */
 package net.k_pan.ssdeep4j;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FuzzyComparatorTest {
 
@@ -63,8 +62,11 @@ class FuzzyComparatorTest {
 	void testCompareWithNull() {
 		String hash = "3:h:h";
 		assertEquals(-1, FuzzyComparator.compare(hash, null));
-		assertEquals(-1, FuzzyComparator.compare(null, hash));
-		assertEquals(-1, FuzzyComparator.compare(null, null));
+		assertEquals(-1, FuzzyComparator.compare((String) null, hash));
+		assertEquals(-1, FuzzyComparator.compare((FuzzyHash) null, hash));
+		assertEquals(-1, FuzzyComparator.compare((String) null, null));
+		assertEquals(-1, FuzzyComparator.compare(new FuzzyHash(hash), (String) null));
+		assertEquals(-1, FuzzyComparator.compare((FuzzyHash) null, (String) null));
 	}
 
 	@ParameterizedTest
@@ -100,5 +102,40 @@ class FuzzyComparatorTest {
 	})
 	void testCompareShortHashParts(String hash1, String hash2, int expectedScore) {
 		assertEquals(expectedScore, FuzzyComparator.compare(hash1, hash2));
+	}
+
+	@ParameterizedTest
+	@CsvSource({
+			"3, 3, true",
+			"3, 6, true",
+			"6, 3, true",
+			"3, 5, false",
+			"3, 9, false",
+			"12, 3, false",
+	})
+	void testAreBlockSizesCompatible(long bs1, long bs2, boolean expected) {
+		assertEquals(expected, FuzzyComparator.areBlockSizesCompatible(bs1, bs2));
+	}
+
+	@Test
+	void testCompareFuzzyHashObjects() {
+		FuzzyHash hash1 = new FuzzyHash("48:abcdefgh:abcdefgh");
+		FuzzyHash hash2 = new FuzzyHash("48:abcdefgi:abcdefgi");
+		FuzzyHash hash3 = new FuzzyHash("50:abcdefgh:abcdefgh");
+
+		assertEquals(88, FuzzyComparator.compare(hash1, hash2));
+		assertEquals(0, FuzzyComparator.compare(hash1, hash3)); // Incompatible block size
+	}
+
+	@Test
+	void testCompareFuzzyHashAndString() {
+		FuzzyHash hash1 = new FuzzyHash("48:abcdefgh:abcdefgh");
+		String hash2 = "48:abcdefgi:abcdefgi";
+		String hash3 = "50:abcdefgh:abcdefgh";
+		String malformedHash = "invalid";
+
+		assertEquals(88, FuzzyComparator.compare(hash1, hash2));
+		assertEquals(0, FuzzyComparator.compare(hash1, hash3)); // Incompatible block size
+		assertEquals(-1, FuzzyComparator.compare(hash1, malformedHash));
 	}
 }

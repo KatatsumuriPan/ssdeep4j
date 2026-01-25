@@ -86,7 +86,7 @@ public final class FuzzyComparator {
 		}
 
 		// Block sizes must be related to be comparable.
-		if (blockSize1 != blockSize2 && (blockSize1 * 2 != blockSize2) && (blockSize1 / 2 != blockSize2)) {
+		if (!areBlockSizesCompatible(blockSize1, blockSize2)) {
 			return 0;
 		}
 
@@ -95,23 +95,80 @@ public final class FuzzyComparator {
 		String s2b1 = FuzzyHasher.copyEliminateSequences(hash2.substring(p2c1 + 1, p2c2));
 		String s2b2 = FuzzyHasher.copyEliminateSequences(hash2.substring(p2c2 + 1));
 
-		// Check for an exact match.
-		if (blockSize1 == blockSize2 && s1b1.equals(s2b1) && s1b2.equals(s2b2)) {
-			return 100;
+		return compareParsed(blockSize1, s1b1, s1b2, blockSize2, s2b1, s2b2);
+	}
+
+	/**
+	 * Compares a FuzzyHash object with a fuzzy hash string and returns a similarity score from 0 to 100.
+	 *
+	 * @param hash1 The FuzzyHash object.
+	 * @param hash2 The fuzzy hash string.
+	 * @return <ul>
+	 * <li>A similarity score between 0 and 100 (100 indicates a perfect match).</li>
+	 * <li>-1 if the FuzzyHash object is null or the hash string is null/malformed.</li>
+	 * <li>0 if the block sizes are incompatible for comparison.</li>
+	 * </ul>
+	 * @since 1.2.0
+	 */
+	public static int compare(FuzzyHash hash1, String hash2) {
+		if (hash1 == null || hash2 == null) {
+			return -1;
 		}
 
-		long score;
-		if (blockSize1 == blockSize2) {
-			int score1 = scoreStrings(s1b1, s2b1, blockSize1);
-			int score2 = scoreStrings(s1b2, s2b2, blockSize1 * 2);
-			score = Math.max(score1, score2);
-		} else if (blockSize1 * 2 == blockSize2) {
-			score = scoreStrings(s1b2, s2b1, blockSize2);
-		} else { // blockSize1 / 2 == blockSize2
-			score = scoreStrings(s1b1, s2b2, blockSize1);
+		int p1 = hash2.indexOf(':');
+		int p2 = (p1 == -1) ? -1 : hash2.indexOf(':', p1 + 1);
+
+		if (p2 == -1) {
+			return -1;
 		}
 
-		return (int) score;
+		long blockSize1 = hash1.getBlockSize();
+		long blockSize2;
+		try {
+			blockSize2 = JavaCompat.parseLong(hash2, 0, p1);
+		} catch (NumberFormatException e) {
+			return -1;
+		}
+
+		// Block sizes must be related to be comparable.
+		if (!areBlockSizesCompatible(blockSize1, blockSize2)) {
+			return 0;
+		}
+
+		String s2b1 = FuzzyHasher.copyEliminateSequences(hash2.substring(p1 + 1, p2));
+		String s2b2 = FuzzyHasher.copyEliminateSequences(hash2.substring(p2 + 1));
+
+		return compareParsed(blockSize1, hash1.getBlock1(), hash1.getBlock2(),
+				blockSize2, s2b1, s2b2);
+	}
+
+	/**
+	 * Compares two FuzzyHash objects and returns a similarity score from 0 to 100.
+	 *
+	 * @param h1 The first FuzzyHash object.
+	 * @param h2 The second FuzzyHash object.
+	 * @return <ul>
+	 * <li>A similarity score between 0 and 100 (100 indicates a perfect match).</li>
+	 * <li>-1 if either FuzzyHash object is null.</li>
+	 * <li>0 if the block sizes are incompatible for comparison.</li>
+	 * </ul>
+	 * @since 1.2.0
+	 */
+	public static int compare(FuzzyHash h1, FuzzyHash h2) {
+		if (h1 == null || h2 == null) {
+			return -1;
+		}
+
+		// Block sizes must be related to be comparable for pre-parsed hashes.
+		if (!areBlockSizesCompatible(h1.getBlockSize(), h2.getBlockSize())) {
+			return 0;
+		}
+		return compareParsed(h1.getBlockSize(), h1.getBlock1(), h1.getBlock2(),
+				h2.getBlockSize(), h2.getBlock1(), h2.getBlock2());
+	}
+
+	static boolean areBlockSizesCompatible(long blockSize1, long blockSize2) {
+		return blockSize1 == blockSize2 || (blockSize1 * 2 == blockSize2) || (blockSize1 / 2 == blockSize2);
 	}
 
 	/**
@@ -317,6 +374,27 @@ public final class FuzzyComparator {
 			}
 		}
 		return dp[m];
+	}
+
+	private static int compareParsed(long blockSize1, String s1b1, String s1b2, long blockSize2, String s2b1, String s2b2) {
+
+		// Check for an exact match.
+		if (blockSize1 == blockSize2 && s1b1.equals(s2b1) && s1b2.equals(s2b2)) {
+			return 100;
+		}
+
+		long score;
+		if (blockSize1 == blockSize2) {
+			int score1 = scoreStrings(s1b1, s2b1, blockSize1);
+			int score2 = scoreStrings(s1b2, s2b2, blockSize1 * 2);
+			score = Math.max(score1, score2);
+		} else if (blockSize1 * 2 == blockSize2) {
+			score = scoreStrings(s1b2, s2b1, blockSize2);
+		} else { // blockSize1 / 2 == blockSize2
+			score = scoreStrings(s1b1, s2b2, blockSize1);
+		}
+
+		return (int) score;
 	}
 
 }
