@@ -115,6 +115,51 @@ public final class FuzzyHasher {
 	}
 
 	/**
+	 * Computes the fuzzy hash for the specified file and returns it as a {@link FuzzyHash} object.
+	 *
+	 * @param filePath The path to the file to be hashed.
+	 * @return The computed {@link FuzzyHash} object.
+	 * @throws IOException If an I/O error occurs reading from the file.
+	 * @since 1.2.0
+	 */
+	public static FuzzyHash hashToFuzzyHash(Path filePath) throws IOException {
+		try (InputStream in = Files.newInputStream(filePath)) {
+			return hashToFuzzyHash(in);
+		}
+	}
+
+	/**
+	 * Computes the fuzzy hash for the specified byte array and returns it as a {@link FuzzyHash} object.
+	 *
+	 * @param content The byte array to be hashed.
+	 * @return The computed {@link FuzzyHash} object.
+	 * @throws IOException If an I/O error occurs during stream processing (unlikely).
+	 * @since 1.2.0
+	 */
+	public static FuzzyHash hashToFuzzyHash(byte[] content) throws IOException {
+		try (InputStream in = new ByteArrayInputStream(content)) {
+			return hashToFuzzyHash(in);
+		}
+	}
+
+	/**
+	 * Computes the fuzzy hash from the given input stream and returns it as a {@link FuzzyHash} object.
+	 * <p>
+	 * This method processes the stream until it is exhausted. The stream is not
+	 * closed by this method.
+	 *
+	 * @param inputStream The input stream to be hashed.
+	 * @return The computed {@link FuzzyHash} object.
+	 * @throws IOException If an I/O error occurs while reading from the stream.
+	 * @since 1.2.0
+	 */
+	public static FuzzyHash hashToFuzzyHash(InputStream inputStream) throws IOException {
+		FuzzyState state = new FuzzyState();
+		state.engineUpdate(inputStream);
+		return state.digestToFuzzyHash();
+	}
+
+	/**
 	 * Truncates sequences of identical characters longer than three to a length of three.
 	 * This is a requirement of the ssdeep algorithm.
 	 * For example, "AAAAABBBCCCCCC" becomes "AAABBBCCC".
@@ -237,88 +282,50 @@ public final class FuzzyHasher {
 		 * @return The computed ssdeep fuzzy hash string, or an empty string if an error occurred.
 		 */
 		public String digest() {
+			int bi = calculateBlocksizeIndex();
+			if (bi < 0) {
+				return "";
+			}
 
-			int bi = bhStart;
 			int h = roll.rollSum();
 			StringBuilder result = new StringBuilder(FUZZY_MAX_RESULT);
-
-			if (totalSize > SSDEEP_TOTAL_SIZE_MAX) {
-				/* The input exceeds data types. */
-				return "";
-			}
-			/* Fixed size optimization. */
-			if ((flags & FUZZY_STATE_SIZE_FIXED) != 0 && fixedSize != totalSize) {
-				return "";
-			}
-			/* Initial blocksize guess. */
-			while (SSDEEP_BS(bi) * SPAMSUM_LENGTH < totalSize)
-				++bi;
-			/* Adapt blocksize guess to actual digest length. */
-			if (bi >= bhEnd)
-				bi = bhEnd - 1;
-			while (bi > bhStart && bh[bi].getFirstDigestLength() < SPAMSUM_LENGTH / 2) {
-				--bi;
-			}
+			boolean elimSeq = (flags & FUZZY_FLAG_ELIMSEQ) != 0;
 
 			result.append(SSDEEP_BS(bi));
 			result.append(':');
-			if ((flags & FUZZY_FLAG_ELIMSEQ) != 0)
-				appendEliminateSequences(result, bh[bi].digest, 0, bh[bi].dindex);
-			else
-				result.append(bh[bi].digest, 0, bh[bi].dindex);
-			if (h != 0) {
-				char r = B64.charAt(bh[bi].h & 0xFF);
-				if (canAppend(r, result)) {
-					result.append(r);
-				}
-			} else {
-				char r = bh[bi].getLastDigest();
-				if (r != '\0') {
-					if (canAppend(r, result)) {
-						result.append(r);
-					}
-				}
-			}
+			appendFirstBlockHash(result, bi, h, elimSeq);
 			result.append(':');
-			if (bi < bhEnd - 1) {
-				++bi;
-				if ((flags & FUZZY_FLAG_NOTRUNC) == 0) {
-					bh[bi].trimDigestLength(SPAMSUM_LENGTH / 2 - 1);
-				}
+			appendSecondBlockHash(result, bi, h, elimSeq);
 
-				if ((flags & FUZZY_FLAG_ELIMSEQ) != 0)
-					appendEliminateSequences(result, bh[bi].digest, 0, bh[bi].dindex);
-				else
-					result.append(bh[bi].digest, 0, bh[bi].dindex);
-
-				if (h != 0) {
-					int hashVal = (flags & FUZZY_FLAG_NOTRUNC) != 0
-							? bh[bi].h
-							: bh[bi].half_h;
-					char r = B64.charAt(hashVal & 0xFF);
-					if (canAppend(r, result)) {
-						result.append(r);
-					}
-				} else {
-					char r = (flags & FUZZY_FLAG_NOTRUNC) != 0
-							? bh[bi].getLastDigest()
-							: bh[bi].half_digest;
-					if (r != '\0') {
-						if (canAppend(r, result)) {
-							result.append(r);
-						}
-					}
-				}
-			} else if (h != 0) {
-				assert (bi == 0 || bi == NUM_BLOCKHASHES - 1);
-				if (bi == 0)
-					result.append(B64.charAt(bh[bi].h & 0xFF));
-				else
-					result.append(B64.charAt(lastH & 0xFF));
-				/* No need to bother with FUZZY_FLAG_ELIMSEQ, because this
-				 * digest has length 1. */
-			}
 			return result.toString();
+		}
+
+		/**
+		 * Computes and returns the final fuzzy hash object from the data processed so far.
+		 * This avoids string concatenation and parsing overhead compared to {@link #digest()}.
+		 *
+		 * @return The computed FuzzyHash object, or null if an error occurred.
+		 * @since 1.2.0
+		 */
+		public FuzzyHash digestToFuzzyHash() {
+			int bi = calculateBlocksizeIndex();
+			if (bi < 0) {
+				return null;
+			}
+
+			int h = roll.rollSum();
+			long blockSize = SSDEEP_BS(bi);
+			StringBuilder sb = new StringBuilder(SPAMSUM_LENGTH);
+
+			// digestToFuzzyHash always performs sequence elimination on the main digest body.
+			final boolean elimSeq = true;
+			appendFirstBlockHash(sb, bi, h, elimSeq);
+			String block1 = sb.toString();
+			sb.setLength(0);
+			appendSecondBlockHash(sb, bi, h, elimSeq);
+			String block2 = sb.toString();
+
+			return new FuzzyHash(blockSize, block1, block2);
 		}
 
 		/**
@@ -453,6 +460,86 @@ public final class FuzzyHasher {
 			bhStart++;
 			reduceBorder *= 2;
 			rollmask = (rollmask << 1) | 1;
+		}
+
+		private int calculateBlocksizeIndex() {
+			if (totalSize > SSDEEP_TOTAL_SIZE_MAX) {
+				return -1;
+			}
+			if ((flags & FUZZY_STATE_SIZE_FIXED) != 0 && fixedSize != totalSize) {
+				return -1;
+			}
+
+			int bi = bhStart;
+			while (SSDEEP_BS(bi) * SPAMSUM_LENGTH < totalSize)
+				++bi;
+			if (bi >= bhEnd)
+				bi = bhEnd - 1;
+			while (bi > bhStart && bh[bi].getFirstDigestLength() < SPAMSUM_LENGTH / 2) {
+				--bi;
+			}
+			return bi;
+		}
+
+		private void appendFirstBlockHash(StringBuilder sb, int bi, int h, boolean elimSeq) {
+			if (elimSeq) {
+				appendEliminateSequences(sb, bh[bi].digest, 0, bh[bi].dindex);
+			} else {
+				sb.append(bh[bi].digest, 0, bh[bi].dindex);
+			}
+
+			if (h != 0) {
+				char r = B64.charAt(bh[bi].h & 0xFF);
+				if (canAppend(r, sb)) {
+					sb.append(r);
+				}
+			} else {
+				char r = bh[bi].getLastDigest();
+				if (r != '\0' && canAppend(r, sb)) {
+					sb.append(r);
+				}
+			}
+		}
+
+		private void appendSecondBlockHash(StringBuilder sb, int bi, int h, boolean elimSeq) {
+			if (bi < bhEnd - 1) {
+				int next_bi = bi + 1;
+				if ((flags & FUZZY_FLAG_NOTRUNC) == 0) {
+					bh[next_bi].trimDigestLength(SPAMSUM_LENGTH / 2 - 1);
+				}
+
+				if (elimSeq) {
+					appendEliminateSequences(sb, bh[next_bi].digest, 0, bh[next_bi].dindex);
+				} else {
+					sb.append(bh[next_bi].digest, 0, bh[next_bi].dindex);
+				}
+
+				if (h != 0) {
+					int hashVal = (flags & FUZZY_FLAG_NOTRUNC) != 0
+							? bh[next_bi].h
+							: bh[next_bi].half_h;
+					char r = B64.charAt(hashVal & 0xFF);
+					if (canAppend(r, sb)) {
+						sb.append(r);
+					}
+				} else {
+					char r = (flags & FUZZY_FLAG_NOTRUNC) != 0
+							? bh[next_bi].getLastDigest()
+							: bh[next_bi].half_digest;
+					if (r != '\0' && canAppend(r, sb)) {
+						sb.append(r);
+					}
+				}
+			} else if (h != 0) {
+				assert (bi == 0 || bi == NUM_BLOCKHASHES - 1);
+				if (bi == 0) {
+					sb.append(B64.charAt(bh[bi].h & 0xFF));
+				} else {
+					sb.append(B64.charAt(lastH & 0xFF));
+				}
+				/* No need to bother with FUZZY_FLAG_ELIMSEQ, because this
+				 * digest has length 1. */
+			}
 		}
 
 		private boolean canAppend(char c, StringBuilder sb) {

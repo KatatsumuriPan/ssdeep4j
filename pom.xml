@@ -6,7 +6,7 @@
 
     <groupId>net.k-pan</groupId>
     <artifactId>ssdeep4j</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <packaging>jar</packaging>
 
     <name>ssdeep4j</name>
@@ -40,6 +40,8 @@
         <maven.compiler.release>8</maven.compiler.release>
         <maven.compiler.testRelease>17</maven.compiler.testRelease>
         <junit.version>5.8.1</junit.version>
+        <jmh.version>1.37</jmh.version>
+        <mockito.version>5.21.0</mockito.version>
     </properties>
 
     <dependencies>
@@ -53,6 +55,24 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
             <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
